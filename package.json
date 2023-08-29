@@ -1,5 +1,5 @@
 {
-	"name": "nostri.chat",
+	"name": "dsnt",
 	"version": "0.3.14159",
 	"scripts": {
 		"dev": "vite dev",
@@ -34,6 +34,7 @@
 		"@sveltejs/adapter-node": "^1.1.7",
 		"@tailwindcss/forms": "^0.5.3",
 		"@tailwindcss/typography": "^0.5.9",
+		"dayjs": "^1.11.9",
 		"emoji-regex": "^10.2.1",
 		"eventemitter3": "^5.0.0",
 		"light-bolt11-decoder": "^3.0.0",

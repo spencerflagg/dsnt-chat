@@ -113,7 +113,7 @@
                     'w-full rounded-full bg-white  drop-shadow-xl justify-between border-2 border-gray-200' :
                     ' rounded-full w-8 h-8 justify-center'
                 }
-                flex items-center absolute ml-5 mt-10 z-10">
+                flex items-center ml-5 mt-10 z-10">
                 {#if zappingIt}
                     {#if mobilePR}
                         <div class="flex flex-col gap-3 w-full">

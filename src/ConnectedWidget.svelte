@@ -239,7 +239,7 @@
 
         }
 
-        if (!name) { name = `[${pubkey.slice(0, 6)}]`; }
+        if (!name) { name = `Anonymous [${pubkey.slice(0, 6)}]`; }
 
         return name;
     }
@@ -321,6 +321,8 @@
                 {#if event.deleted}
                     👆 deleted
                 {/if}
+            {:else}
+                <p>no comments</p>
             {/each}
         {/if}
     </div>
@@ -328,7 +330,7 @@
 
 
 <div class="flex flex-col">
-    <div class="
+    <!-- <div class="
         border-y border-y-slate-200
         -mx-4 my-2 bg-slate-100 text-black text-sm
         px-4 py-2
@@ -343,7 +345,7 @@
             <b>Public notes:</b>
             your followers see your messages on their timeline
         {/if}
-    </div>
+    </div> -->
 
     <div class="flex flex-row gap-2 -mx-1">
         <textarea
@@ -357,7 +359,7 @@
                 rounded-xl
                 text-gray-600
                 border
-            " placeholder="Say hello!"
+            " placeholder="leave a comment"
             rows=1
             on:keydown={inputKeyDown}
         ></textarea>

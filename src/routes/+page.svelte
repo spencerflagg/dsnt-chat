@@ -281,6 +281,50 @@
 							>
 								<span class="opacity-50 font-normal">https://</span>psbt.io
 							</button>
+							<button type="button" class="
+								inline-flex items-center rounded-r-md border px-4 py-2 text-md font-medium
+								{currentTopic === 'https://a.com' ?
+								'text-white bg-orange-700 border-orange-900'
+							:
+								'border-gray-300 bg-white text-gray-700'}
+							:ring-indigo-500"
+								on:click={()=>{ chatType='GLOBAL'; chatTags=[]; chatReferenceTags=['https://a.com'] }}
+							>
+								<span class="opacity-50 font-normal">a 🌎️</span>
+							</button>
+							<button type="button" class="
+								inline-flex items-center rounded-r-md border px-4 py-2 text-md font-medium
+								{currentTopic === 'https://a.com' ?
+								'text-white bg-orange-700 border-orange-900'
+							:
+								'border-gray-300 bg-white text-gray-700'}
+							:ring-indigo-500"
+								on:click={()=>{ chatType='GROUP'; chatTags=[]; chatReferenceTags=['https://a.com'] }}
+							>
+								<span class="opacity-50 font-normal">a 👥</span>
+							</button>
+							<button type="button" class="
+								inline-flex items-center rounded-r-md border px-4 py-2 text-md font-medium
+								{currentTopic === 'https://b.com' ?
+								'text-white bg-orange-700 border-orange-900'
+							:
+								'border-gray-300 bg-white text-gray-700'}
+							:ring-indigo-500"
+								on:click={()=>{ chatType='GLOBAL'; chatTags=[]; chatReferenceTags=['https://b.com'] }}
+							>
+								<span class="opacity-50 font-normal">b 🌎️</span>
+							</button>
+							<button type="button" class="
+								inline-flex items-center rounded-r-md border px-4 py-2 text-md font-medium
+								{currentTopic === 'https://b.com' ?
+								'text-white bg-orange-700 border-orange-900'
+							:
+								'border-gray-300 bg-white text-gray-700'}
+							:ring-indigo-500"
+								on:click={()=>{ chatType='GROUP'; chatTags=[]; chatReferenceTags=['https://b.com'] }}
+							>
+								<span class="opacity-50 font-normal">b 👥</span>
+							</button>
 					</span>
 
 				</div>
