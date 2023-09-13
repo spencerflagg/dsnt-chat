@@ -6,7 +6,8 @@ const config = {
 	kit: {
 		adapter: adapter({ out: 'build' }),
 	},
-	preprocess: vitePreprocess()
+	preprocess: vitePreprocess(),
+	extensions: [".svelte", ".md"],
 };
 
 export default config;

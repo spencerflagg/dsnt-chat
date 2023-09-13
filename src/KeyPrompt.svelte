@@ -107,8 +107,12 @@
 </script>
 
 <h1 class="">
-    How would you like to connect?
+    Welcome to DiSseNT
 </h1>
+
+<h2 class="">
+    How would you like to connect?
+</h2>
 
 {#if publicKey}
     <p class="">
@@ -135,21 +139,21 @@
         Cancel
     </button>
 {:else if !publicKey}
-    <div class="">
+    <div class="btn-list">
         {#if hasNostrNip07}
-            <button class="" on:click|preventDefault={useNip07}>
-                Browser Extension (NIP-07)
+            <button class="btn" on:click|preventDefault={useNip07}>
+                Browser Extension <span class="btn__subheading">(NIP-07)</span>
             </button>
         {/if}
 
 
-        <button class="" on:click|preventDefault={useNip46}>
-            Nostr Connect (NIP-46)
+        <button class="btn" on:click|preventDefault={useNip46}>
+            Nostr Connect<span class="btn__subheading">(NIP-46)</span>
         </button>
 
-        <button class="" on:click|preventDefault={useDiscardableKeys}>
+        <button class="btn" on:click|preventDefault={useDiscardableKeys}>
             Anonymous
-            <span class="">
+            <span class="btn__subheading">
                 (Ephemeral Keys)
             </span>
         </button>

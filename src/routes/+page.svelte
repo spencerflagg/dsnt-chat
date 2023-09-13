@@ -1,430 +1,414 @@
 <script>
-	import 'websocket-polyfill';
-	import Container from '../Container.svelte';
-	import Widget from '../Widget.svelte';
-	import { chatAdapter } from '../lib/store';
+  // Imports: Library and Svelte Store
+  import { onMount, onDestroy, afterUpdate } from "svelte";
+  import { fade } from 'svelte/transition';
+  import { browser } from '$app/environment';
+  import { chatAdapter, url, relays } from '../lib/store';
 
-	let chatStarted;
-	let chatType = 'GROUP';
-	let websiteOwnerPubkey = 'fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52';
-	let chatTags = [];
-	let chatId = '9cef2eead5d91df42eba09be363f1272107e911685126ea5e261ac2d93299478';
-	let chatReferenceTags = [];
-	const relays = [
-		'wss://relay.f7z.io',
-		'wss://nos.lol',
-		'wss://relay.nostr.band',
-	];
+  // Imports: Polyfills and Components
+  import "websocket-polyfill";
+  import KeyPrompt from "../KeyPrompt.svelte";
+  import ConnectedWidget from "../ConnectedWidget.svelte";
+  import MetaData from "../MetaData.svelte";
+  import Brand from "../Brand.svelte";
 
-	$: currentTopic = [...chatTags, ...chatReferenceTags][0]
+  // Local Variables
+  let chatStarted;
+  let chatType = "GROUP";
+  let websiteOwnerPubkey = "fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52";
+  let chatTags = [];
+  let chatReferenceTags = [];
+  let searchElement;
+  let inputUrl = "";
+  let refreshKey = 1;
+  let scrollPosition = 0;
+  let searchIsFocused;
+  let mainElement;
 
-	function currentTopic(topic) {
-		return [...chatTags, ...chatReferenceTags].includes(topic)
-	}
+  // Reactive Statements
+  //$: currentTopic = [...chatTags, ...chatReferenceTags][0];
+  $: chatId = $url && stringToHex($url);
+  $: chatStarted = !!$chatAdapter;
+  $: if (chatStarted) {
+    afterUpdate(() => {
+      //if (searchElement) searchElement.focus();
+    });
+    refreshWidget();
+  }
+
+  // Lifecycle Methods
+  onMount(() => {
+    if (browser) document.addEventListener('keydown', handleGlobalKeydown);
+  });
+
+  onDestroy(() => {
+    if (browser) document.removeEventListener('keydown', handleGlobalKeydown);
+  });
+
+  // Helper Functions
+  function stringToHex(str) {
+    let result = "";
+
+    for (let i = 0; i < str.length; i++) {
+      // Convert each character to its char code
+      const charCode = str.charCodeAt(i);
+
+      // Convert the char code to its hex representation
+      result += charCode.toString(16).padStart(2, "0");
+    }
+
+    return result;
+  }
+
+  const isValidUrl = (str) => {
+    const pattern = new RegExp(
+      "^(https?:\\/\\/)?" + // protocol
+        "((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|" + // domain name
+        "((\\d{1,3}\\.){3}\\d{1,3}))" + // OR ip (v4) address
+        "(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*" + // port and path
+        "(\\?[;&a-z\\d%_.~+=-]*)?" + // query string
+        "(\\#[-a-z\\d_]*)?$",
+      "i"
+    ); // fragment locator
+    return !!pattern.test(str);
+  };
+
+  const startsWithProtocol = (str) => {
+    return str.startsWith("http://") || str.startsWith("https://");
+  };
+
+  // Event Handlers and UI Logic
+  function handleEnterKey(event) {
+    if (event.keyCode === 13 && isValidUrl(inputUrl)) {
+      showComments(inputUrl);
+    }
+  }
+
+  function handlePaste(event) {
+    let thisEvent = event.clipboardData.getData('Text');
+    showComments(thisEvent);
+  }
+
+  function handleScroll(event) {
+    scrollPosition = event.target.scrollTop;
+  }
+
+  function handleGlobalKeydown(event) {
+    // Check for Ctrl + /
+    if (event.ctrlKey && event.key === '/') {
+
+      searchIsFocused = true;
+      // Focus the input element
+      searchElement.focus();
+      // Clear the input
+      searchElement.value = '';
+    }
+  }
+
+  function searchFocused() {
+    searchIsFocused = true;
+  }
+
+  function searchBlurred(e) {
+    //console.log(e);
+    searchIsFocused = false;
+    return true;
+  }
+
+  function updateFocusState(event) {
+    setTimeout(() => {
+      searchIsFocused = (event.type === "focus");
+      //console.log("isFocused: ", searchIsFocused);
+    }, 50);
+  }
+
+  function showComments(str) {
+    console.log(str);
+    if (!str.startsWith("http://") && !str.startsWith("https://")) {
+      $url = "https://" + str;
+    } else {
+      $url = str;
+    }
+    inputUrl = "";
+    chatType = "GROUP";
+    chatTags = [];
+    chatReferenceTags = [$url];
+  }
+
+  function refreshWidget() {
+    refreshKey++;
+  }
+
+  // function currentTopic(topic) {
+  //   return [...chatTags, ...chatReferenceTags].includes(topic);
+  // }
 </script>
 
 <svelte:head>
-	<title>Nostri.chat / A NOSTR chat widget you control</title>
-	<meta property="og:url" content="https://nostri.chat/">
-	<meta name="description" content="A chat widget you own, powered by nostr" />
-    <meta property="og:description" content="A chat widget you own, powered by nostr" />
+  <title>DiSseNT - The web's comment section</title>
+  <meta property="og:url" content="https://dsnt.chat/" />
+  <meta name="description" content="The web's comment section." />
+  <meta
+    property="og:description"
+    content="The web's comment section."
+  />
 </svelte:head>
 
-<section class="
-	lg:min-h-screen
-	text-white
-	bg-gradient-to-b from-orange-500 to-orange-800
-">
-	<div class="lg:min-h-screen mx-auto w-full lg:max-w-7xl py-5 xl:py-10
-		flex flex-col md:flex-row
-		gap-20 items-center px-4 lg:px-0
-		relative
-	">
-		<div class="
-			md:w-7/12 gap-10
-		">
-			<section id="hero" style="min-height: 50vh;">
-				<h1 class="
-					text-6xl
-					font-black
-					my-2
-				">Nostri.chat</h1>
+<nav class="content">
+  <div class="search-wrapper">
+    <div class="search">
+      <div class="search__bar {searchIsFocused ? 'search__bar--focused' : ''}">
+        {#if !startsWithProtocol(inputUrl)}
+          <span>https://</span>
+        {/if}
+        <input
+          type="search"
+          bind:value={inputUrl}
+          bind:this={searchElement}
+          placeholder="type or paste a URL"
+          on:keyup={handleEnterKey}
+          on:paste={handlePaste}
+          on:focus={updateFocusState} 
+          on:blur={updateFocusState}
+        />
+      </div>
+      {#if isValidUrl(inputUrl)}
+        <button transition:fade={{ delay: 250, duration: 300 }} class="search__btn" on:click={showComments(inputUrl)} title="Show Comments">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-message" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="var(--color)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+            <path d="M8 9h8" />
+            <path d="M8 13h6" />
+            <path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-5l-5 3v-3h-2a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12z" />
+          </svg>
+        </button>
+      {/if}
+    </div>
+  </div>
+</nav>
 
-				<h2 class="
-					text-2xl lg:text-4xl
-					text-bold
-				">A chat widget for your site, powered by nostr</h2>
+<div class="page-outer">
+  <main class="content--scrolling" on:scroll={handleScroll} bind:this={mainElement}>
+  
+      <section class="nav">
+        <nav>
+          <ul>
+            <li><a href='/about'>About</a></li>
+          </ul>
+        </nav>
+      </section>
 
-				<p class="
-					max-w-prose
-					text-2xl
-					text-gray-200
-					tracking-wide
-					leading-9
-					my-5
-				">
-					Simple, interoperable
-					communication with your visitors, in a way
-					that gives you and them complete ownership
-					over the data.
-				</p>
-			</section>
-		</div>
+      {#if !chatStarted}
+        <section class="brand">
+          <Brand />
+        </section>
+        <section class="key-prompt">
+          <KeyPrompt
+            {websiteOwnerPubkey}
+            chatConfiguration={{
+              chatType,
+              chatId,
+              chatTags,
+              chatReferenceTags,
+            }}
+            relays={$relays}
+          />
+        </section>
+      {/if}
+      {#if chatStarted && $url}
+        <section class="brand hide-on-mobile">
+          <Brand />
+        </section>
 
-		<div class="
-			flex-row items-center justify-center
-			min-h-screen
-			hidden md:flex
-			md:w-5/12
-		">
-			<div class="
-				shadow-2xl
-				bg-gray-100/90 backdrop-blur-md mb-5 w-96 max-w-screen-sm text-black rounded-3xl px-4 py-5 overflow-auto
-				flex flex-col justify-end
-				fixed
-			" style="{chatStarted ? 'max-height: 80vh;' : 'padding: 4rem 2rem !important;'}">
-				<Container chatConfiguration={{
-					chatType,
-					chatId,
-					chatTags,
-					chatReferenceTags,
-				}} {relays} bind:chatStarted={chatStarted} />
-			</div>
-		</div>
-	</div>
-</section>
+        <section class="shortcuts hide-on-mobile">
+          <ul>
+            <li>
+              <strong>Ctrl + /</strong> to change the URL
+            </li>
+            <li>
+              <strong>Ctrl + space</strong> to type a comment
+            </li>
+          </ul>
+        </section>
 
-<section class="
-	min-h-screen
-	py-5
-	lg:py-16
-" style="min-height: 50vh;">
-	<div class="mx-auto w-full lg:max-w-7xl py-5 xl:py-10
-	flex flex-col lg:flex-row
-	gap-20 px-4 lg:px-0
-	" style="min-height: 50vh;">
-	<div class="md:w-7/12 flex flex-col gap-8">
-		<div>
-			<h1 class="text-6xl lg:text-7xl font-black">
-				Innovative modes
-			</h1>
+        <section class="metadata">
+          {#if $url}
+            <MetaData url={$url} scrollPosition={scrollPosition}/>
+          {/if}
+        </section>
 
-			<p class="
-				text-2xl font-extralight
-			">
-				Because we use Nostr for communicating,
-				<b>Nostri.chat</b>
-				can use some new, creative approaches to using chat widget,
-				depending on what you want to achieve.
-			</p>
-		</div>
-
-		<div class="flex flex-col gap-3">
-			<h2 class="text-3xl text-orange-600 font-black">
-				Classic mode
-				<span class="text-2xl text-slate-500 font-extralight block">encrypted 1-on-1 chats</span>
-			</h2>
-
-			<p class="
-				text-xl text-gray-500 text-justify
-				font-light
-				leading-8
-			">
-				Lorem ipsum dolor sit, amet consectetur adipisicing elit. Sapiente quae eveniet placeat, obcaecati nesciunt nam iure. Culpa omnis hic eaque illum alias iure autem atque? Distinctio facilis recusandae omnis expedita.
-			</p>
-
-			{#if $chatAdapter}
-				{#if chatType === 'DM'}
-					<button class="px-4 rounded border-2 border-orange-700 py-2 text-orange-700 text-lg w-full font-semibold">
-						Active
-					</button>
-				{:else}
-					<button class="px-4 rounded bg-orange-700 py-2 text-white text-lg w-full font-semibold" on:click={()=>{ chatType='DM'; chatTags=[]; chatReferenceTags=[] }}>
-						Try it
-					</button>
-				{/if}
-			{/if}
-		</div>
-
-		<div class="flex flex-col gap-3">
-			<h2 class="text-3xl text-orange-600 font-black">
-				<div class="flex flex-row gap-2">
-					<span>🫂</span>
-					<span class="flex flex-col">
-						<span>Public chat groups</span>
-						<span class="text-2xl text-slate-500 font-extralight block">public groups</span>
-					</span>
-				</div>
-			</h2>
-
-			<p class="
-				text-xl text-gray-500 text-justify
-				font-light
-				leading-8
-			">
-				Embed NIP-28 public chat groups on your site.
-			</p>
-
-			<div class="flex flex-col lg:flex-row justify-between mt-10 gap-10 mb-6">
-				<div class="flex flex-col lg:w-1/2 items-center gap-4 border p-4 shadow-md rounded-lg w-fit">
-					<h3 class="
-						text-black
-						text-lg
-						font-semibold
-					">Group chat</h3>
-					<span class="inline-flex rounded-md">
-						<button type="button" class="
-							inline-flex items-center rounded-l-md border px-4 py-2 text-md font-medium
-							{chatType === 'GROUP' && chatId === '9cef2eead5d91df42eba09be363f1272107e911685126ea5e261ac2d93299478' ?
-							'text-white bg-orange-700 border-orange-900'
-						:
-							'border-gray-300 bg-white text-gray-700'}
-						:ring-indigo-500"
-							on:click={()=>{ chatType='GROUP'; chatTags=[]; chatId='9cef2eead5d91df42eba09be363f1272107e911685126ea5e261ac2d93299478' }}
-						>
-							#Test
-						</button>
-
-						<button type="button" class="
-							inline-flex items-center rounded-r-md border px-4 py-2 text-md font-medium
-							{chatType === 'GROUP' && chatId === 'a6f436a59fdb5e23c757b1e30478742996c54413df777843e0a731af56a96eea' ?
-							'text-white bg-orange-700 border-orange-900'
-						:
-							'border-gray-300 bg-white text-gray-700'}
-						:ring-indigo-500"
-							on:click={()=>{ chatType='GROUP'; chatTags=[]; chatId='a6f436a59fdb5e23c757b1e30478742996c54413df777843e0a731af56a96eea' }}
-						>
-							#NDK
-						</button>
-					</span>
-
-				</div>
-			</div>
-
-			<h2 class="text-3xl text-orange-600 font-black">
-				<div class="flex flex-row gap-2">
-					<span>🔖</span>
-					<span class="flex flex-col">
-						<span>Tagged Global Chat</span>
-						<span class="text-2xl text-slate-500 font-extralight block">public discussion/support</span>
-					</span>
-				</div>
-			</h2>
-
-			<p class="
-				text-xl text-gray-500 text-justify
-				font-light
-				leading-8
-			">
-				Imagine having a global chat on your website about a certain topic.
-				Anyone can participate, from your website or from any Nostr client.
-			</p>
-
-
-			<div class="flex flex-col lg:flex-row justify-between mt-10 gap-10">
-				<div class="flex flex-col items-center gap-4 border p-4 shadow-md rounded-lg w-fit lg:w-full">
-					<h3 class="
-						text-black
-						text-lg
-						font-semibold
-					">🔖 Topic-based chats</h3>
-
-					<span class="inline-flex rounded-md">
-						<button type="button" class="
-							inline-flex items-center rounded-l-md border px-4 py-2 text-md font-medium
-							{currentTopic === 'nostrica' ?
-								'text-white bg-orange-700 border-orange-900'
-							:
-								'border-gray-300 bg-white text-gray-700'}
-						" on:click={()=>{ chatType='GLOBAL'; chatTags=['nostrica']; chatReferenceTags=[] }}>
-							#nostrica
-						</button>
-
-						<button type="button" class="
-							inline-flex items-center rounded-r-md border px-4 py-2 text-md font-medium
-							{currentTopic === 'bitcoin' ?
-								'text-white bg-orange-700 border-orange-900'
-							:
-								'border-gray-300 bg-white text-gray-700'}
-						" on:click={()=>{ chatType='GLOBAL'; chatTags=['bitcoin']; chatReferenceTags=[] }}>
-							#bitcoin
-						</button>
-					</span>
-				</div>
-
-				<div class="flex flex-col items-center gap-4 border p-4 shadow-md rounded-lg w-fit lg:w-full">
-					<h3 class="
-						text-black
-						text-lg
-						font-semibold
-					">🌎 Website-based chats</h3>
-						<span class="inline-flex rounded-md">
-							<button type="button" class="
-								inline-flex items-center rounded-l-md border px-4 py-2 text-md font-medium
-								{currentTopic === 'https://nostri.chat' ?
-								'text-white bg-orange-700 border-orange-900'
-							:
-								'border-gray-300 bg-white text-gray-700'}
-							:ring-indigo-500"
-								on:click={()=>{ chatType='GLOBAL'; chatTags=[]; chatReferenceTags=['https://nostri.chat'] }}
-							>
-								<span class="opacity-50 font-normal">https://</span>nostri.chat
-							</button>
-							<button type="button" class="
-								inline-flex items-center rounded-r-md border px-4 py-2 text-md font-medium
-								{currentTopic === 'https://psbt.io' ?
-								'text-white bg-orange-700 border-orange-900'
-							:
-								'border-gray-300 bg-white text-gray-700'}
-							:ring-indigo-500"
-								on:click={()=>{ chatType='GLOBAL'; chatTags=[]; chatReferenceTags=['https://psbt.io'] }}
-							>
-								<span class="opacity-50 font-normal">https://</span>psbt.io
-							</button>
-							<button type="button" class="
-								inline-flex items-center rounded-r-md border px-4 py-2 text-md font-medium
-								{currentTopic === 'https://a.com' ?
-								'text-white bg-orange-700 border-orange-900'
-							:
-								'border-gray-300 bg-white text-gray-700'}
-							:ring-indigo-500"
-								on:click={()=>{ chatType='GLOBAL'; chatTags=[]; chatReferenceTags=['https://a.com'] }}
-							>
-								<span class="opacity-50 font-normal">a 🌎️</span>
-							</button>
-							<button type="button" class="
-								inline-flex items-center rounded-r-md border px-4 py-2 text-md font-medium
-								{currentTopic === 'https://a.com' ?
-								'text-white bg-orange-700 border-orange-900'
-							:
-								'border-gray-300 bg-white text-gray-700'}
-							:ring-indigo-500"
-								on:click={()=>{ chatType='GROUP'; chatTags=[]; chatReferenceTags=['https://a.com'] }}
-							>
-								<span class="opacity-50 font-normal">a 👥</span>
-							</button>
-							<button type="button" class="
-								inline-flex items-center rounded-r-md border px-4 py-2 text-md font-medium
-								{currentTopic === 'https://b.com' ?
-								'text-white bg-orange-700 border-orange-900'
-							:
-								'border-gray-300 bg-white text-gray-700'}
-							:ring-indigo-500"
-								on:click={()=>{ chatType='GLOBAL'; chatTags=[]; chatReferenceTags=['https://b.com'] }}
-							>
-								<span class="opacity-50 font-normal">b 🌎️</span>
-							</button>
-							<button type="button" class="
-								inline-flex items-center rounded-r-md border px-4 py-2 text-md font-medium
-								{currentTopic === 'https://b.com' ?
-								'text-white bg-orange-700 border-orange-900'
-							:
-								'border-gray-300 bg-white text-gray-700'}
-							:ring-indigo-500"
-								on:click={()=>{ chatType='GROUP'; chatTags=[]; chatReferenceTags=['https://b.com'] }}
-							>
-								<span class="opacity-50 font-normal">b 👥</span>
-							</button>
-					</span>
-
-				</div>
-			</div>
-		</div>
-	</div>
-</section>
-
-<section class="
-	min-h-screen
-	py-5
-	lg:py-16
-	bg-slate-100
-" style="min-height: 50vh;">
-	<div class="mx-auto w-full lg:max-w-7xl py-5 xl:py-10
-	flex flex-col lg:flex-row
-	gap-20 items-center px-4 lg:px-0
-	" style="min-height: 50vh;">
-		<div class="md:w-4/5 lg:w-3/5 grid grid-cols-1 gap-8">
-
-			<div>
-				<h1 class="text-7xl font-black">
-					Easy-peasy setup
-				</h1>
-
-				<p class="
-					text-2xl font-extralight
-				">
-					Just drop this snippet on your website and you're good to go.
-				</p>
-			</div>
-
-			<div class="text-xl font-semibold">Public group chat (GROUP)</div>
-			<pre class ="
-				p-4
-				bg-white
-				overflow-auto
-			">
-&lt;script
-	src="https://nostri.chat/public/bundle.js"
-	<b>data-chat-type</b>="<span class="text-orange-500">GROUP</span>"
-	<b>data-chat-id</b>="<span class="text-orange-500">&lt;GROUP_ID_IN_HEX_FORMAT&gt;</span>"
-	<b>data-relays</b>="<span class="text-orange-500">wss://relay.f7z.io,wss://nos.lol,wss://relay.nostr.band</span>"
-&gt;&lt;/script&gt;
-&lt;link rel="stylesheet" href="https://nostri.chat/public/bundle.css"&gt;</pre>
-
-<div class="text-xl font-semibold">Public global notes (kind-1 short notes)</div>
-<pre class ="
-	p-4
-	bg-white
-	overflow-auto
-">
-&lt;script
-src="https://nostri.chat/public/bundle.js"
-<b>data-chat-type</b>="<span class="text-orange-500">GLOBAL</span>"
-<b>data-chat-tags</b>="<span class="text-orange-500">bitcoin</span>"
-<b>data-relays</b>="<span class="text-orange-500">wss://relay.f7z.io,wss://nos.lol,wss://relay.nostr.band</span>"
-&gt;&lt;/script&gt;
-&lt;link rel="stylesheet" href="https://nostri.chat/public/bundle.css"&gt;</pre>
-
-<div class="text-xl font-semibold">Encrypted DMs</div>
-			<pre class ="
-				p-4
-				bg-white
-				overflow-auto
-			">
-&lt;script
-src="https://nostri.chat/public/bundle.js"
-<b>data-chat-type</b>="<span class="text-orange-500">DM</span>"
-<b>data-website-owner-pubkey</b>="<span class="text-orange-500">YOUR_PUBKEY_IN_HEX_FORMAT</span>"
-<b>data-relays</b>="<span class="text-orange-500">wss://relay.f7z.io,wss://nos.lol,wss://relay.nostr.band</span>"
-&gt;&lt;/script&gt;
-&lt;link rel="stylesheet" href="https://nostri.chat/public/bundle.css"&gt;</pre>
-		</div>
-	</div>
-</section>
-
-<div class="md:hidden">
-	<Widget chatConfiguration={{
-		chatTags,
-		chatReferenceTags,
-	}} {websiteOwnerPubkey} {chatType} {chatId} {relays} bind:chatStarted={chatStarted} />
+        {#each [refreshKey] as key (key)}
+          <ConnectedWidget
+            {websiteOwnerPubkey}
+            chatConfiguration={{
+              chatType,
+              chatId,
+              chatTags,
+              chatReferenceTags,
+            }}
+            relays={$relays}
+            mainElement={mainElement}
+          />
+        {/each}
+      {/if}
+  </main>
 </div>
 
-<footer class="py-6 bg-orange-900 font-mono text-white text-center mt-12 px-10">
-	<div class="flex justify-center flex-row">
-		<div class="text-sm">
-			NOSTRI.CHAT
-			by
-			<a class="text-purple-50 hover:text-orange-400" href="https://pablof7z.com">
-				@pablof7z
-			</a>
-		</div>
-	</div>
-</footer>
-
 <style>
-	/* div { border: solid red 1px; } */
 
-	@tailwind base;
-	@tailwind components;
-	@tailwind utilities;
+
+
+@media only screen and (max-width: 598px) {
+  main {
+    width: fit-content;
+    border: none;
+  }
+  nav {
+    width: 100% !important;
+  }
+  section {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+  }
+  .search__bar{
+    font-size: 5vmin !important;
+  }
+}
+
+@media only screen and (max-width: 1140px) {
+  section {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+  }
+
+  section.brand {
+    order: -1;
+    margin-top: 1rem;
+  }
+
+  section.shortcuts {
+    order: 0;
+  }
+}
+
+
+nav{
+  width: 566px;
+  align-self: center;
+  flex-shrink: 0;
+}
+
+  .content {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    
+  }
+
+  section.brand {
+    position: fixed;
+    bottom: 1rem;
+    left: 2rem;
+  }
+
+  section.metadata {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    position: sticky;
+    top:0;
+    z-index: 1;
+  }
+
+  section.nav{
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+  }
+
+  section.shortcuts {
+    position: fixed;
+    top:6rem;
+    left: 2rem;
+  }
+
+section.shortcuts ul {
+  padding: 0;
+}
+
+section.shortcuts li {
+  list-style-type: none;
+  color: var(--c-lines);
+}
+
+  .search-wrapper {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+  }
+
+  .search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .search button {
+    position: absolute;
+    height: 100%;
+    text-transform: uppercase;
+    width: max-content;
+  }
+
+.search__btn svg {
+  width: 2rem;
+  --color: var(--c-bright);
+}
+
+.search__btn {
+  border: 0;
+}
+
+  .search__bar {
+    display: flex;
+    border-bottom: 1px solid var(--c-lines);
+    font-size: 2rem;
+    align-items: center;
+    padding: .5rem;
+    flex-grow: 1;
+  }
+
+  .search__bar span{
+    color: rgba(255, 255, 255, 0.25);
+    font-family: Work Sans, sans-serif;
+  }
+
+  .search__bar input {
+    color: rgba(255, 255, 255);
+    transition: all .3s ease;
+    background-color: transparent;
+    font-size: inherit;
+    border: none;
+    font-weight: inherit;
+    font-family: Work Sans, sans-serif;
+    width: calc(100% - 10rem);
+  }
+
+  .search__bar input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .search__bar input:focus {
+    outline: none;
+  }  
+  
+  .search__bar.search__bar--focused {
+    border-bottom: 1px solid var(--c-bright);
+  }
+
 </style>
